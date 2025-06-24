@@ -12,14 +12,17 @@ As this repository is not yet added in the default HACS repository you have to a
     - *password*: The password to the user
 7. The API will pull the data and reload every 2 minutes
 
+Currently all machines are added, selection will be added later (you can change this yourself by creating a new user in Beszels Pocketbas and adding this user only to the machines you want to be monitored).
+
 # Usage
 After installing the following entities will exposed as sensors (more to come):
 - Status (Connection)
-- Uptime
-- CPU
-- Disk usage
-- Temperature
-- RAM
+- Uptime (Minutes)
+- CPU (Percentage)
+- Disk usage (Percentage)
+- Temperature (°C)
+- Bandwidth (Mbit/s)
+- RAM (Percentage)
 
 For example if your machine is named *test*, CPU will be available as ```sensor.test_cpu```
 
