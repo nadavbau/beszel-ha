@@ -1,3 +1,4 @@
 {
-  "name": "Beszel API"
+  "name": "Beszel API",
+  "render_readme": true
 }
