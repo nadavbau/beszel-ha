@@ -7,7 +7,7 @@ As this repository is not yet added in the default HACS repository you have to a
 4. Restart HomeAssistant
 5. Go to integrations, press Add integration and search for BeszelAPI
 6. In the Setup Dialog use the following values
-    - *URL*: The root url / IP of your Beszel instance, like beszel.example.com
+    - *URL*: The root url / IP of your Beszel instance, like http://beszel.example.com or https://beszel.example.com
     - *user*: Either your default admin username / email or (recommended) create another user with the role user and assigning the agents you want to expose to it.
     - *password*: The password to the user
 7. The API will pull the data and reload every 2 minutes
