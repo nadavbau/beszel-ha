@@ -13,12 +13,11 @@ async def async_setup_entry(hass, entry):
     username = entry.data[CONF_USERNAME]
     password = entry.data[CONF_PASSWORD]
     client = BeszelApiClient(url, username, password)
-    client.login()
 
     async def async_update_data():
         try:
             systems = await hass.async_add_executor_job(client.get_systems)
-
+            
             # Fetch system stats for each system
             for system in systems:
                 stats = await hass.async_add_executor_job(client.get_system_stats, system.id)
@@ -27,7 +26,7 @@ async def async_setup_entry(hass, entry):
                     system.stats = stats.stat if hasattr(stats, 'stat') else {}
                 else:
                     system.stats = {}
-
+            
             return systems
         except Exception as err:
             raise UpdateFailed(f"Error fetching systems: {err}")
