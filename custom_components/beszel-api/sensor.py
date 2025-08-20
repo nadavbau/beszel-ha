@@ -12,6 +12,12 @@ async def async_setup_entry(hass, entry, async_add_entities):
         entities.append(BeszelBandwidthSensor(coordinator, system))
         entities.append(BeszelTemperatureSensor(coordinator, system))
         entities.append(BeszelUptimeSensor(coordinator, system))
+
+        # Add EFS disk sensors for each EFS entry in the system stats
+        if hasattr(system, 'stats') and system.stats and 'efs' in system.stats:
+            for disk_name, disk_data in system.stats['efs'].items():
+                entities.append(BeszelEFSDiskSensor(coordinator, system, disk_name))
+
     async_add_entities(entities)
 
 class BeszelBaseSensor(CoordinatorEntity, SensorEntity):
@@ -175,3 +181,56 @@ class BeszelUptimeSensor(BeszelBaseSensor):
     @property
     def native_unit_of_measurement(self):
         return "minutes"
+
+class BeszelEFSDiskSensor(BeszelBaseSensor):
+    def __init__(self, coordinator, system, disk_name):
+        super().__init__(coordinator, system)
+        self._disk_name = disk_name
+
+    @property
+    def unique_id(self):
+        return f"beszel_{self._system_id}_efs_{self._disk_name}"
+
+    @property
+    def name(self):
+        return f"{self.system.name} EFS {self._disk_name}" if self.system else None
+
+    @property
+    def icon(self):
+        return "mdi:harddisk"
+
+    @property
+    def native_value(self):
+        if not self.system or not hasattr(self.system, 'stats') or not self.system.stats:
+            return None
+
+        efs_data = self.system.stats.get('efs', {})
+        disk_data = efs_data.get(self._disk_name, {})
+
+        total_space = disk_data.get('d')
+        used_space = disk_data.get('du')
+
+        # Calculate disk usage percentage
+        if total_space and used_space and total_space > 0:
+            return round((used_space / total_space) * 100, 2)
+        return None
+
+    @property
+    def native_unit_of_measurement(self):
+        return "%"
+
+    @property
+    def extra_state_attributes(self):
+        """Return additional state attributes for the EFS disk."""
+        if not self.system or not hasattr(self.system, 'stats') or not self.system.stats:
+            return {}
+
+        efs_data = self.system.stats.get('efs', {})
+        disk_data = efs_data.get(self._disk_name, {})
+
+        return {
+            "total_disk_space_gb": disk_data.get('d'),
+            "disk_used_gb": disk_data.get('du'),
+            "read_mb_s": disk_data.get('r'),
+            "write_mb_s": disk_data.get('w'),
+        }

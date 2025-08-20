@@ -14,3 +14,17 @@ class BeszelApiClient:
     def get_systems(self):
         records = self._client.collection("systems").get_full_list()
         return records
+
+    def get_system_stats(self, system_id):
+        """Get the latest system stats for a specific system"""
+        try:
+            # Get the latest record for the specific system
+            records = self._client.collection("system_stats").get_list(
+                1, 1, {"filter": f"system = '{system_id}'", "sort": "-created"}
+            )
+            if records.items:
+                return records.items[0]
+            return None
+        except Exception as e:
+            # Return None if no stats found or error occurs
+            return None
