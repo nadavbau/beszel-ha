@@ -17,7 +17,18 @@ async def async_setup_entry(hass, entry):
 
     async def async_update_data():
         try:
-            return await hass.async_add_executor_job(client.get_systems)
+            systems = await hass.async_add_executor_job(client.get_systems)
+
+            # Fetch system stats for each system
+            for system in systems:
+                stats = await hass.async_add_executor_job(client.get_system_stats, system.id)
+                if stats:
+                    # Attach the stats data to the system object
+                    system.stats = stats.stat if hasattr(stats, 'stat') else {}
+                else:
+                    system.stats = {}
+
+            return systems
         except Exception as err:
             raise UpdateFailed(f"Error fetching systems: {err}")
 
