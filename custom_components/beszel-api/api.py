@@ -1,4 +1,7 @@
 from pocketbase import PocketBase
+import logging
+
+LOGGER = logging.getLogger(__name__)
 
 class BeszelApiClient:
     def __init__(self, url, username, password):
@@ -10,13 +13,21 @@ class BeszelApiClient:
     def _ensure_client(self):
         """Initialize the PocketBase client if not already done"""
         if self._client is None:
-            self._client = PocketBase(self._url)
-            self._client.collection("users").auth_with_password(self._username, self._password)
+            try:
+                self._client = PocketBase(self._url)
+                self._client.collection("users").auth_with_password(self._username, self._password)
+            except Exception as e:
+                LOGGER.error(f"Failed to initialize PocketBase client: {e}")
+                raise
 
     def get_systems(self):
-        self._ensure_client()
-        records = self._client.collection("systems").get_full_list()
-        return records
+        try:
+            self._ensure_client()
+            records = self._client.collection("systems").get_full_list()
+            return records
+        except Exception as e:
+            LOGGER.error(f"Failed to fetch systems: {e}")
+            raise
 
     def get_system_stats(self, system_id):
         """Get the latest system stats for a specific system"""
@@ -30,5 +41,6 @@ class BeszelApiClient:
                 return records.items[0]
             return None
         except Exception as e:
+            LOGGER.error(f"Failed to fetch stats for system {system_id}: {e}")
             # Return None if no stats found or error occurs
             return None
