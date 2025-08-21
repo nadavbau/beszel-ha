@@ -1,24 +1,48 @@
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
-from .const import DOMAIN
+from .const import DOMAIN, LOGGER
 
 async def async_setup_entry(hass, entry, async_add_entities):
     coordinator = hass.data[DOMAIN][entry.entry_id]
     entities = []
-    for system in coordinator.data:
-        entities.append(BeszelCPUSensor(coordinator, system))
-        entities.append(BeszelRAMSensor(coordinator, system))
-        entities.append(BeszelDiskSensor(coordinator, system))
-        entities.append(BeszelBandwidthSensor(coordinator, system))
-        entities.append(BeszelTemperatureSensor(coordinator, system))
-        entities.append(BeszelUptimeSensor(coordinator, system))
 
-        # Add EFS disk sensors for each EFS entry in the system stats
-        if hasattr(system, 'stats') and system.stats and 'efs' in system.stats:
-            for disk_name, disk_data in system.stats['efs'].items():
-                entities.append(BeszelEFSDiskSensor(coordinator, system, disk_name))
+    try:
+        # Get systems and stats from coordinator data
+        if isinstance(coordinator.data, dict) and 'systems' in coordinator.data:
+            systems = coordinator.data['systems']
+            stats_data = coordinator.data.get('stats', {})
+        else:
+            # Fallback for old data format
+            systems = coordinator.data
+            stats_data = {}
 
-    async_add_entities(entities)
+        for system in systems:
+            try:
+                entities.append(BeszelCPUSensor(coordinator, system))
+                entities.append(BeszelRAMSensor(coordinator, system))
+                entities.append(BeszelDiskSensor(coordinator, system))
+                entities.append(BeszelBandwidthSensor(coordinator, system))
+                entities.append(BeszelTemperatureSensor(coordinator, system))
+                entities.append(BeszelUptimeSensor(coordinator, system))
+
+                # Get stats for this system
+                system_stats = stats_data.get(system.id, {})
+
+                # Create EFS sensors if EFS data is available
+                if system_stats and 'efs' in system_stats and isinstance(system_stats['efs'], dict):
+                    for disk_name in system_stats['efs'].keys():
+                        entities.append(BeszelEFSDiskSensor(coordinator, system, disk_name, system_stats))
+                        LOGGER.info(f"Created EFS sensor for {system.name} - {disk_name}")
+
+            except Exception as e:
+                LOGGER.error(f"Failed to create sensors for system {system.name if hasattr(system, 'name') else 'unknown'}: {e}")
+                continue
+
+        LOGGER.info(f"Created {len(entities)} sensors total")
+        async_add_entities(entities)
+    except Exception as e:
+        LOGGER.error(f"Failed to setup sensors: {e}")
+        raise
 
 class BeszelBaseSensor(CoordinatorEntity, SensorEntity):
     def __init__(self, coordinator, system):
@@ -27,7 +51,14 @@ class BeszelBaseSensor(CoordinatorEntity, SensorEntity):
 
     @property
     def system(self):
-        for s in self.coordinator.data:
+        # Handle new data structure where coordinator.data is a dict with 'systems' key
+        if isinstance(self.coordinator.data, dict) and 'systems' in self.coordinator.data:
+            systems = self.coordinator.data['systems']
+        else:
+            # Fallback for old data format
+            systems = self.coordinator.data
+
+        for s in systems:
             if s.id == self._system_id:
                 return s
         return None
@@ -183,9 +214,10 @@ class BeszelUptimeSensor(BeszelBaseSensor):
         return "minutes"
 
 class BeszelEFSDiskSensor(BeszelBaseSensor):
-    def __init__(self, coordinator, system, disk_name):
+    def __init__(self, coordinator, system, disk_name, stats_data):
         super().__init__(coordinator, system)
         self._disk_name = disk_name
+        self._stats_data = stats_data
 
     @property
     def unique_id(self):
@@ -201,10 +233,10 @@ class BeszelEFSDiskSensor(BeszelBaseSensor):
 
     @property
     def native_value(self):
-        if not self.system or not hasattr(self.system, 'stats') or not self.system.stats:
+        if not self._stats_data:
             return None
 
-        efs_data = self.system.stats.get('efs', {})
+        efs_data = self._stats_data.get('efs', {})
         disk_data = efs_data.get(self._disk_name, {})
 
         total_space = disk_data.get('d')
@@ -222,10 +254,10 @@ class BeszelEFSDiskSensor(BeszelBaseSensor):
     @property
     def extra_state_attributes(self):
         """Return additional state attributes for the EFS disk."""
-        if not self.system or not hasattr(self.system, 'stats') or not self.system.stats:
+        if not self._stats_data:
             return {}
 
-        efs_data = self.system.stats.get('efs', {})
+        efs_data = self._stats_data.get('efs', {})
         disk_data = efs_data.get(self._disk_name, {})
 
         return {
