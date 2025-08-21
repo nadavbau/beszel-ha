@@ -8,13 +8,8 @@ async def async_setup_entry(hass, entry, async_add_entities):
 
     try:
         # Get systems and stats from coordinator data
-        if isinstance(coordinator.data, dict) and 'systems' in coordinator.data:
-            systems = coordinator.data['systems']
-            stats_data = coordinator.data.get('stats', {})
-        else:
-            # Fallback for old data format
-            systems = coordinator.data
-            stats_data = {}
+        systems = coordinator.data['systems']
+        stats_data = coordinator.data.get('stats', {})
 
         for system in systems:
             try:
@@ -51,13 +46,7 @@ class BeszelBaseSensor(CoordinatorEntity, SensorEntity):
 
     @property
     def system(self):
-        # Handle new data structure where coordinator.data is a dict with 'systems' key
-        if isinstance(self.coordinator.data, dict) and 'systems' in self.coordinator.data:
-            systems = self.coordinator.data['systems']
-        else:
-            # Fallback for old data format
-            systems = self.coordinator.data
-
+        systems = self.coordinator.data['systems']
         for s in systems:
             if s.id == self._system_id:
                 return s
