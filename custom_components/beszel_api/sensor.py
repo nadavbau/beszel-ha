@@ -208,7 +208,7 @@ class BeszelBandwidthSensor(BeszelBaseSensor):
 
     @property
     def native_value(self):
-        return self.system.info.get("b") if self.system else None
+        return self.system.info.get("bb") / 1024000 if self.system else None
 
     @property
     def native_unit_of_measurement(self):
@@ -217,6 +217,10 @@ class BeszelBandwidthSensor(BeszelBaseSensor):
     @property
     def state_class(self):
         return SensorStateClass.MEASUREMENT
+    
+    @property
+    def suggested_display_precision(self):
+        return 8
 
 
 class BeszelNetworkReceiveSensor(BeszelBaseSensor):
@@ -234,16 +238,19 @@ class BeszelNetworkReceiveSensor(BeszelBaseSensor):
 
     @property
     def native_value(self):
-        return self.stats_data.get("nr") if self.system else None
+        return self.stats_data.get("b")[1] / 1024 if self.system else None
 
     @property
     def native_unit_of_measurement(self):
-        return "MB/s"
+        return "KB/s"
 
     @property
     def state_class(self):
         return SensorStateClass.MEASUREMENT
         
+    @property
+    def suggested_display_precision(self):
+        return 2
         
 class BeszelNetworkSendSensor(BeszelBaseSensor):
     @property
@@ -260,15 +267,19 @@ class BeszelNetworkSendSensor(BeszelBaseSensor):
 
     @property
     def native_value(self):
-        return self.stats_data.get("ns") if self.system else None
+        return self.stats_data.get("b")[0] / 1024 if self.system else None
 
     @property
     def native_unit_of_measurement(self):
-        return "MB/s"
+        return "KB/s"
 
     @property
     def state_class(self):
         return SensorStateClass.MEASUREMENT
+
+    @property
+    def suggested_display_precision(self):
+        return 2
 
 
 class BeszelTemperatureSensor(BeszelBaseSensor):
